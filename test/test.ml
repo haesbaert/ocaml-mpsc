@@ -23,34 +23,42 @@ let dump_gc () =
                  minor_collections=%-6d major_collections=%-6d\n%!"
     s.live_words s.live_blocks s.minor_collections s.major_collections
 
-let producer a n () =
-  for i = a to n - 1 do
-    Mpsc.push mpq i
+let producer n () =
+  let mydomain = Domain.self () in
+  for i = 0 to n - 1 do
+    Mpsc.push mpq (mydomain, i)
   done
 
-let consumer () =
-  let rec loop seen =
-    let () = if (seen mod 10000000) = 0 then dump_gc () in
+let consumer p0_domain p1_domain () =
+  let rec loop seen p0_last p1_last =
+    if (seen mod 10000000) = 0 then dump_gc ();
     if total_entries = seen then
       ()
     else
       match Mpsc.pop mpq with
       | None ->
         Domain.cpu_relax ();
-        loop seen
-      | Some _ ->
-        loop (succ seen)
+        loop seen p0_last p1_last
+      | Some (domain, cur) ->
+        if domain = p0_domain then
+          let () = assert (cur = (succ p0_last)) in
+          loop (succ seen) cur p1_last
+        else if domain = p1_domain then
+          let () = assert (cur = (succ p1_last)) in
+          loop (succ seen) p0_last cur
+        else
+          failwith "invalid domain"
   in
-  loop 0
+  loop 0 (-1) (-1)
   
 let _ =
   (* This is very naive *)
   let half = total_entries / 2 in
-  let p1 = Domain.spawn (producer 0 half) in
-  let p2 = Domain.spawn (producer half total_entries) in
-  let c = Domain.spawn consumer in
+  let p0 = Domain.spawn (producer half) in
+  let p1 = Domain.spawn (producer half) in
+  let c = Domain.spawn (consumer (Domain.get_id p0) (Domain.get_id p1)) in
+  Domain.join p0;
   Domain.join p1;
-  Domain.join p2;
   Domain.join c
 
 
