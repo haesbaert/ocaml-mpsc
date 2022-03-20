@@ -21,12 +21,11 @@ type 'a node = {
 
 type 'a t = {
   head : 'a node Atomic.t;
-  tail : 'a node Atomic.t;
+  mutable tail : 'a node;
 }
 
 let is_empty t =
-  let tail = Atomic.get t.tail in
-  Option.is_none tail.next.value
+  Option.is_none t.tail.next.value
 
 let push t v =
   let rec n = { next = n; value = Some v } in
@@ -34,14 +33,13 @@ let push t v =
   prev.next <- n
 
 let pop t =
-  let tail = Atomic.get t.tail in
-  let value = tail.next.value in
+  let value = t.tail.next.value in
   if Option.is_some value then begin
-    tail.next.value <- None;
-    Atomic.set t.tail tail.next;
+    t.tail.next.value <- None;
+    t.tail <- t.tail.next;
   end;
   value
 
 let make () =
   let rec stub = { next = stub; value = None } in
-  { head = Atomic.make stub; tail = Atomic.make stub }
+  { head = Atomic.make stub; tail = stub }
