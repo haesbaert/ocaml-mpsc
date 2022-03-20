@@ -14,7 +14,6 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-type 'a node
 type 'a t
 val is_empty : 'a t -> bool
 val push : 'a t -> 'a -> unit
