@@ -24,7 +24,7 @@ let producer a n () =
 
 let consumer () =
   let rec loop total_seen =
-    if total_entries = total_entries then
+    if total_entries = total_seen then
       ()
     else
       match Mpsc.pop mpq with
