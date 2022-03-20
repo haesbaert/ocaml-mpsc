@@ -1,4 +1,4 @@
-# Lockless Multiple Producer Single Consumer for ocaml-multicore
+# Lockless Multiple Producer Single Consumer Queue for ocaml-multicore
 
 This is a toy implementation of Dmitry Vuykov's queue in ocaml.
 
