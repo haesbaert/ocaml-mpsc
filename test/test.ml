@@ -17,22 +17,29 @@
 let total_entries = 100000000
 let mpq = Mpsc.make ()
 
+let dump_gc () =
+  let s = Gc.stat () in
+  Printf.printf "live_words=%-8d live_blocks=%-8d \
+                 minor_collections=%-6d major_collections=%-6d\n%!"
+    s.live_words s.live_blocks s.minor_collections s.major_collections
+
 let producer a n () =
   for i = a to n - 1 do
     Mpsc.push mpq i
   done
 
 let consumer () =
-  let rec loop total_seen =
-    if total_entries = total_seen then
+  let rec loop seen =
+    let () = if (seen mod 10000000) = 0 then dump_gc () in
+    if total_entries = seen then
       ()
     else
       match Mpsc.pop mpq with
       | None ->
         Domain.cpu_relax ();
-        loop total_seen
+        loop seen
       | Some _ ->
-        loop (succ total_seen)
+        loop (succ seen)
   in
   loop 0
   
